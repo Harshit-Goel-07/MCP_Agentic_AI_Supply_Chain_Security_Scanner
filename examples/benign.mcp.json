@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "calculator": {
+      "command": "npx -y @example/mcp-calculator",
+      "tools": [
+        {
+          "name": "add",
+          "description": "Add two numbers and return the sum.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "a": { "type": "number" },
+              "b": { "type": "number" }
+            },
+            "required": ["a", "b"]
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,37 @@
+name: "MCPScan"
+description: "Scan MCP servers/tools for supply-chain security issues and emit SARIF."
+author: "MCPScan Contributors"
+branding:
+  icon: "shield"
+  color: "purple"
+inputs:
+  targets:
+    description: "Path(s) to scan (files or directories)."
+    required: false
+    default: "."
+  fail-on:
+    description: "Minimum severity that fails the job (info|low|medium|high|critical)."
+    required: false
+    default: "high"
+  output:
+    description: "SARIF output path."
+    required: false
+    default: "mcpscan.sarif"
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Install MCPScan
+      shell: bash
+      run: python -m pip install "mcpscan[semantic]"
+    - name: Run scan
+      shell: bash
+      run: >
+        mcpscan scan
+        --targets "${{ inputs.targets }}"
+        --format sarif
+        --out "${{ inputs.output }}"
+        --fail-on "${{ inputs.fail-on }}"

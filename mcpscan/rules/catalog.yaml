@@ -1,0 +1,71 @@
+# MCPScan rule catalog. Findings reference these ids; the engine enriches findings with the
+# canonical title / OWASP MCP mapping / default severity and remediation guidance.
+# OWASP MCP Top 10 mapping is intentionally explicit for auditability.
+catalog_version: "2026.1"
+rules:
+  - id: MCP-TP-001
+    title: Prompt-injection / tool-poisoning phrasing
+    owasp_mcp_id: MCP-01
+    category: tool_poisoning
+    default_severity: high
+    remediation: >
+      Remove instruction-override or exfiltration phrasing from the tool description. Tool
+      descriptions must describe behaviour, never issue instructions to the agent.
+
+  - id: MCP-TP-002
+    title: Semantic similarity to a known poisoning pattern
+    owasp_mcp_id: MCP-01
+    category: tool_poisoning
+    default_severity: medium
+    remediation: Review the description; rephrase to remove agent-directed instructions.
+
+  - id: MCP-TP-003
+    title: Hidden Unicode in tool description
+    owasp_mcp_id: MCP-03
+    category: obfuscation
+    default_severity: high
+    remediation: Strip zero-width, bidi-override, and tag characters from the description.
+
+  - id: MCP-TP-004
+    title: Mixed-script (homoglyph) text
+    owasp_mcp_id: MCP-03
+    category: obfuscation
+    default_severity: medium
+    remediation: Normalise the description to a single script; investigate look-alike characters.
+
+  - id: MCP-TP-005
+    title: Chat-template special-token injection
+    owasp_mcp_id: MCP-03
+    category: obfuscation
+    default_severity: high
+    remediation: Remove model special tokens from tool-provided text.
+
+  - id: MCP-SCOPE-001
+    title: Excessive or dangerous parameter
+    owasp_mcp_id: MCP-04
+    category: excessive_scope
+    default_severity: medium
+    remediation: Constrain parameters; avoid raw command/URL/path inputs or validate strictly.
+
+  - id: MCP-SCOPE-002
+    title: Execute + untrusted-read on one tool
+    owasp_mcp_id: MCP-07
+    category: confused_deputy
+    default_severity: high
+    remediation: Split responsibilities; never combine untrusted input ingestion with execution.
+
+  - id: MCP-FLOW-001
+    title: Cross-server toxic data flow
+    owasp_mcp_id: MCP-06
+    category: toxic_flow
+    default_severity: high
+    remediation: >
+      Isolate servers so sensitive/untrusted readers cannot share an agent context with egress
+      tools, or require explicit human approval for the egress step.
+
+  - id: MCP-DRIFT-001
+    title: Tool definition drift (possible rug-pull)
+    owasp_mcp_id: MCP-05
+    category: rug_pull
+    default_severity: high
+    remediation: Pin tool versions; re-review any server whose tool descriptions/schemas changed.

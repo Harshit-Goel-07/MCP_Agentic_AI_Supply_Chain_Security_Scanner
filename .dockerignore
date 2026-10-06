@@ -1,0 +1,25 @@
+.venv/
+venv/
+.git/
+.github/
+dist/
+build/
+**/__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.sarif
+.mcpscan-cache/
+Architecture/
+System Design/
+Database Design/
+APIs/
+Frontend Structure/
+Backend Structure/
+Infrastructure/
+CI-CD/
+Deployment/
+Monitoring/
+Documentation/
+Threat-Model/
+Evaluation/

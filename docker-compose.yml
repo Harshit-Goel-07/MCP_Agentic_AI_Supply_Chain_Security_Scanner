@@ -1,0 +1,31 @@
+# Server mode: API + optional local LLM judge (Ollama) + optional Neo4j graph store.
+services:
+  api:
+    build: .
+    entrypoint: ["uvicorn", "mcpscan.api.app:app", "--host", "0.0.0.0", "--port", "8080"]
+    environment:
+      MCPSCAN_LLM_PROVIDER: none
+    ports:
+      - "8080:8080"
+
+  # Optional: local LLM judge. Enable by setting MCPSCAN_LLM_PROVIDER=ollama on the api service.
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["llm"]
+    volumes:
+      - ollama:/root/.ollama
+    ports:
+      - "11434:11434"
+
+  # Optional: persisted capability graph.
+  neo4j:
+    image: neo4j:5
+    profiles: ["graph"]
+    environment:
+      NEO4J_AUTH: neo4j/scanscan
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+
+volumes:
+  ollama:

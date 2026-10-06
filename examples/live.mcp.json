@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "live_demo_server": {
+      "command": "python",
+      "args": ["examples/live_poisoned_server.py"]
+    }
+  }
+}
