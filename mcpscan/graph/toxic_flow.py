@@ -55,14 +55,11 @@ def find_toxic_flows(
     return chains
 
 
-def _build_chain(
-    path: list[str], caps: dict[str, list[Capability]], graph: nx.DiGraph
-) -> Chain:
+def _build_chain(path: list[str], caps: dict[str, list[Capability]], graph: nx.DiGraph) -> Chain:
     servers = {graph.nodes[node].get("server") for node in path}
     cross_server = len(servers) > 1
     steps = [
-        ChainStep(tool=node, capability=_primary_capability(caps.get(node, [])))
-        for node in path
+        ChainStep(tool=node, capability=_primary_capability(caps.get(node, []))) for node in path
     ]
     has_sensitive = any(Capability.READ_SENSITIVE in caps.get(n, []) for n in path)
     if cross_server and has_sensitive:

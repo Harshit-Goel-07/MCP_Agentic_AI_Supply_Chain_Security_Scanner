@@ -48,22 +48,27 @@ def test_drift_detection() -> None:
 
 
 def test_cli_subcommands() -> None:
-    from typer.testing import CliRunner
     from mcpscan.cli import app
+    from typer.testing import CliRunner
 
     runner = CliRunner()
     assert runner.invoke(app, ["--help"]).exit_code == 0
     assert runner.invoke(app, ["version"]).exit_code == 0
     assert runner.invoke(app, ["rules"]).exit_code == 0
-    
+
     benign_path = str(EXAMPLES / "benign.mcp.json")
     poisoned_path = str(EXAMPLES / "poisoned.mcp.json")
-    
+
     assert runner.invoke(app, ["scan", "--targets", benign_path]).exit_code == 0
     # Poisoned example fails with exit_code 1 on default fail_on=high
     assert runner.invoke(app, ["scan", "--targets", poisoned_path]).exit_code == 1
     # Poisoned example succeeds if fail_on=critical and no critical findings triggered
-    assert runner.invoke(app, ["scan", "--targets", poisoned_path, "--format", "json", "--fail-on", "critical"]).exit_code == 0
+    assert (
+        runner.invoke(
+            app, ["scan", "--targets", poisoned_path, "--format", "json", "--fail-on", "critical"]
+        ).exit_code
+        == 0
+    )
 
 
 def test_scan_live_mcp_server() -> None:
@@ -77,8 +82,7 @@ def test_scan_live_mcp_server() -> None:
 
 def test_semantic_analyzer_e2e() -> None:
     from mcpscan.config import Settings
+
     scanner = Scanner(settings=Settings(enable_semantic=True))
     result = scanner.scan_targets([EXAMPLES / "poisoned.mcp.json"])
     assert any(f.rule_id == "MCP-TP-002" for f in result.findings)
-
-

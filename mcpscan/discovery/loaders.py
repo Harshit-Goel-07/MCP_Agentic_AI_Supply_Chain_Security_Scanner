@@ -64,7 +64,6 @@ def _parse_server(name: str, raw: dict[str, Any], source: str) -> ServerModel:
     )
 
 
-
 def load_config_file(path: Path) -> list[ServerModel]:
     """Load all servers declared in a single JSON config file."""
 

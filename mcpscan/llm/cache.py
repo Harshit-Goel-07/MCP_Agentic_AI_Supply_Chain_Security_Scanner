@@ -24,7 +24,9 @@ class ResponseCache:
     def get(self, provider: str, model: str, prompt: str) -> str | None:
         path = self._dir / f"{self._key(provider, model, prompt)}.json"
         if path.is_file():
-            return json.loads(path.read_text(encoding="utf-8")).get("response")
+            response = json.loads(path.read_text(encoding="utf-8")).get("response")
+            if isinstance(response, str):
+                return response
         return None
 
     def put(self, provider: str, model: str, prompt: str, response: str) -> None:

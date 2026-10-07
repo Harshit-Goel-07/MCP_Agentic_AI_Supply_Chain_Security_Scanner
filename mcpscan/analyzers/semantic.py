@@ -37,10 +37,11 @@ class SemanticAnalyzer:
 
     def _try_init(self) -> bool:
         try:
-            from sklearn.feature_extraction.text import TfidfVectorizer  # noqa: PLC0415
+            from sklearn.feature_extraction.text import TfidfVectorizer
 
-            self._vectorizer = TfidfVectorizer(stop_words="english")
-            self._matrix = self._vectorizer.fit_transform(_ARCHETYPES)
+            vectorizer = TfidfVectorizer(stop_words="english")
+            self._vectorizer = vectorizer
+            self._matrix = vectorizer.fit_transform(_ARCHETYPES)
             return True
         except Exception:  # pragma: no cover - optional dependency missing
             return False
@@ -52,10 +53,15 @@ class SemanticAnalyzer:
         if not text or self._vectorizer is None or self._matrix is None:
             return []
 
-        from sklearn.metrics.pairwise import cosine_similarity  # noqa: PLC0415
+        from sklearn.metrics.pairwise import cosine_similarity
 
-        vec = self._vectorizer.transform([text])
-        scores = cosine_similarity(vec, self._matrix)[0]
+        vectorizer = self._vectorizer
+        matrix = self._matrix
+        assert vectorizer is not None
+        assert matrix is not None
+
+        vec = vectorizer.transform([text])
+        scores = cosine_similarity(vec, matrix)[0]
         best_idx = int(scores.argmax())
         best = float(scores[best_idx])
         if best < _THRESHOLD:

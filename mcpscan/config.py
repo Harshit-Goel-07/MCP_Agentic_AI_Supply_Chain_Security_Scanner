@@ -6,7 +6,7 @@ Configuration is layered: defaults < ``mcpscan.toml`` (if present) < environment
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from functools import total_ordering
 from pathlib import Path
 
@@ -15,7 +15,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 @total_ordering
-class Severity(str, Enum):
+class Severity(StrEnum):
     """Ordered finding severities. Use :meth:`rank` for comparisons."""
 
     INFO = "info"
@@ -35,7 +35,7 @@ class Severity(str, Enum):
         }
         return order[self]
 
-    def __eq__(self, other: object) -> bool:  # type: ignore[override]
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Severity):
             return NotImplemented
         return self.rank == other.rank
@@ -49,7 +49,7 @@ class Severity(str, Enum):
         return hash(self.value)
 
 
-class LLMProvider(str, Enum):
+class LLMProvider(StrEnum):
     NONE = "none"
     OLLAMA = "ollama"
     CLAUDE = "claude"

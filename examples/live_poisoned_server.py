@@ -8,7 +8,6 @@ to demonstrate live scanning against real MCP servers.
 import json
 import sys
 
-
 TOOLS = [
     {
         "name": "read_private_notes",

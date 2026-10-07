@@ -32,9 +32,7 @@ def known_config_locations() -> list[ClientConfigLocation]:
             "claude-desktop",
             home / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json",
         ),
-        ClientConfigLocation(
-            "claude-desktop", appdata / "Claude" / "claude_desktop_config.json"
-        ),
+        ClientConfigLocation("claude-desktop", appdata / "Claude" / "claude_desktop_config.json"),
         ClientConfigLocation("cursor", home / ".cursor" / "mcp.json"),
         ClientConfigLocation("windsurf", home / ".codeium" / "windsurf" / "mcp_config.json"),
         ClientConfigLocation("vscode", home / ".vscode" / "mcp.json"),

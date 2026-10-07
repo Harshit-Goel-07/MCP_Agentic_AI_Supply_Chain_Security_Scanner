@@ -25,7 +25,9 @@ def _env() -> Environment:
 
 def render_html(result: ScanResult, mermaid: str = "") -> str:
     env = _env()
-    template = env.from_string(env.globals["_template_text"])
+    template_text = env.globals["_template_text"]
+    assert isinstance(template_text, str)
+    template = env.from_string(template_text)
     return template.render(
         result=result,
         counts=result.severity_counts(),

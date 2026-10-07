@@ -30,4 +30,4 @@ def risk_score(findings: list[Finding]) -> int:
     raw = sum(_SEVERITY_WEIGHT[f.severity] * max(f.confidence, 0.1) for f in findings)
     # Saturate towards 100.
     score = 100.0 * (1.0 - 1.0 / (1.0 + raw / 40.0))
-    return int(round(min(score, 100.0)))
+    return round(min(score, 100.0))

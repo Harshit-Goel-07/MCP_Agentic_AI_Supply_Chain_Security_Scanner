@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from mcpscan.models import ServerModel, ToolModel, Transport
 
 
