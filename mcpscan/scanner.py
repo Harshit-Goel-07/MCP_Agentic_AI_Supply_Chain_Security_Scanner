@@ -6,13 +6,14 @@ capability graph -> search toxic flows -> optional LLM judge -> enrich via catal
 
 from __future__ import annotations
 
+from datetime import UTC
 from pathlib import Path
 
 from mcpscan.analyzers.base import Analyzer, AnalyzerRegistry, ScanContext
 from mcpscan.analyzers.schema import SchemaAnalyzer
 from mcpscan.analyzers.semantic import SemanticAnalyzer
 from mcpscan.analyzers.static_text import StaticTextAnalyzer
-from mcpscan.config import Severity, Settings
+from mcpscan.config import Settings, Severity
 from mcpscan.connector import enumerate_server_tools
 from mcpscan.discovery import discover_servers
 from mcpscan.graph import build_capability_graph, find_toxic_flows
@@ -52,7 +53,7 @@ class Scanner:
         self._catalog = load_catalog()
 
     def scan_servers(self, servers: list[ServerModel]) -> ScanResult:
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         # Enumerate live tools for servers that define a command but lack static tools
         for server in servers:
@@ -68,7 +69,6 @@ class Scanner:
                 result.findings.extend(analyzer.analyze(tool, ctx))
             result.findings.extend(self._llm_findings(tool))
 
-
         graph = build_capability_graph(tools)
         result.chains = find_toxic_flows(graph, tools, max_hops=self.settings.max_flow_hops)
 
@@ -79,7 +79,7 @@ class Scanner:
         all_findings = result.findings + chain_findings
         result.risk_score = risk_score(all_findings)
         result.mode = "dynamic" if self.settings.enable_dynamic else "static"
-        result.finished_at = datetime.now(timezone.utc)
+        result.finished_at = datetime.now(UTC)
         # Keep chain findings out of `findings` (they live in `chains`) but reflect them in score.
         return result
 

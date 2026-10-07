@@ -144,7 +144,11 @@ class ClaudeJudge:
     def __init__(self, settings: Settings) -> None:
         import os
 
-        self._model = settings.llm_model if settings.llm_model != "qwen2.5-coder" else "claude-3-5-haiku-latest"
+        self._model = (
+            settings.llm_model
+            if settings.llm_model != "qwen2.5-coder"
+            else "claude-3-5-haiku-latest"
+        )
         self._api_key = settings.llm_api_key or os.environ.get("ANTHROPIC_API_KEY", "")
         self._cache = ResponseCache(settings.llm_cache_dir)
 
@@ -189,4 +193,3 @@ def build_judge(settings: Settings) -> LLMJudge:
     if settings.llm_provider == LLMProvider.CLAUDE:
         return ClaudeJudge(settings)
     return NullJudge()
-

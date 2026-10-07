@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -41,9 +40,9 @@ def _print_table(result: ScanResult) -> None:
     table.add_column("OWASP")
     table.add_column("Tool")
     table.add_column("Detail", overflow="fold")
-    
+
     sorted_findings = sorted(result.findings, key=lambda f: -f.severity.rank)
-    
+
     for finding in sorted_findings:
         table.add_row(
             f"[{_severity_style(finding.severity)}]{finding.severity.value.upper()}[/]",
@@ -53,7 +52,7 @@ def _print_table(result: ScanResult) -> None:
             finding.title,
         )
     console.print(table)
-    
+
     if result.chains:
         console.print(f"\n[bold]Toxic flows:[/] {len(result.chains)}")
         for chain in result.chains:
@@ -63,16 +62,26 @@ def _print_table(result: ScanResult) -> None:
 
 @app.command()
 def scan(
-    targets: str = typer.Option(".", "--targets", "-t", help="Comma-separated list of config files or directories."),
+    targets: str = typer.Option(
+        ".", "--targets", "-t", help="Comma-separated list of config files or directories."
+    ),
     fmt: str = typer.Option("table", "--format", "-f", help="Output format: table|sarif|json|html"),
-    out: Optional[str] = typer.Option(None, "--out", "-o", help="Output file path (for non-table formats)."),
-    fail_on: str = typer.Option("high", "--fail-on", help="Min severity for non-zero exit: info|low|medium|high|critical"),
-    include_clients: bool = typer.Option(False, "--include-clients", help="Scan known client configs."),
+    out: str | None = typer.Option(
+        None, "--out", "-o", help="Output file path (for non-table formats)."
+    ),
+    fail_on: str = typer.Option(
+        "high", "--fail-on", help="Min severity for non-zero exit: info|low|medium|high|critical"
+    ),
+    include_clients: bool = typer.Option(
+        False, "--include-clients", help="Scan known client configs."
+    ),
     semantic: bool = typer.Option(False, "--semantic", help="Enable semantic analysis."),
-    llm: Optional[str] = typer.Option(None, "--llm", help="LLM judge provider:model, e.g. 'ollama:qwen2.5-coder'."),
+    llm: str | None = typer.Option(
+        None, "--llm", help="LLM judge provider:model, e.g. 'ollama:qwen2.5-coder'."
+    ),
 ) -> None:
     """Scan MCP servers for supply-chain security issues."""
-    
+
     # 1. Parse Targets
     target_paths = [Path(t.strip()) for t in targets.split(",") if t.strip()]
     if not target_paths:
@@ -85,14 +94,11 @@ def scan(
     except ValueError:
         valid_opts = ", ".join([s.value for s in Severity])
         console.print(f"[red]Error: Invalid --fail-on '{fail_on}'. Must be one of: {valid_opts}[/]")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
     # 3. Build Settings Overrides
-    overrides: dict[str, object] = {
-        "enable_semantic": semantic, 
-        "fail_on": fail_severity
-    }
-    
+    overrides: dict[str, object] = {"enable_semantic": semantic, "fail_on": fail_severity}
+
     if llm:
         provider, _, model = llm.partition(":")
         try:
@@ -101,8 +107,8 @@ def scan(
                 overrides["llm_model"] = model
         except ValueError:
             console.print(f"[red]Error: Unknown LLM provider '{provider}'.[/]")
-            raise typer.Exit(code=1)
-            
+            raise typer.Exit(code=1) from None
+
     settings = load_settings(**overrides)
 
     # 4. Execute Scan
@@ -111,11 +117,11 @@ def scan(
         result = scanner.scan_targets(target_paths, include_clients=include_clients)
     except Exception as e:
         console.print(f"[red]Critical Error during scan: {e}[/]")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
 
     # 5. Output Results
     output_content = ""
-    
+
     if fmt == "table":
         _print_table(result)
     elif fmt == "json":
@@ -129,8 +135,9 @@ def scan(
     elif fmt == "html":
         tools = [t for s in result.servers for t in s.tools]
         from mcpscan.graph import build_capability_graph
+
         mermaid = graph_to_mermaid(build_capability_graph(tools))
-        
+
         if out:
             write_html(result, Path(out), mermaid)
             console.print(f"[green]Wrote HTML report to {out}[/]")
@@ -144,7 +151,9 @@ def scan(
     # 6. Exit Code Logic
     max_sev = result.max_severity()
     if result.findings and max_sev.rank >= fail_severity.rank:
-        console.print(f"\n[red]Failing: Max severity {max_sev.value} >= Threshold {fail_severity.value}[/]")
+        console.print(
+            f"\n[red]Failing: Max severity {max_sev.value} >= Threshold {fail_severity.value}[/]"
+        )
         raise typer.Exit(code=1)
 
 
@@ -154,10 +163,10 @@ def diff(
     head: str = typer.Option(..., "--head", help="Path to new scan JSON."),
 ) -> None:
     """Diff two scan JSON files to detect tool drift (rug-pull)."""
-    
+
     base_path = Path(base)
     head_path = Path(head)
-    
+
     if not base_path.exists():
         console.print(f"[red]Error: Base file not found: {base_path}[/]")
         raise typer.Exit(code=1)
@@ -170,17 +179,17 @@ def diff(
         head_result = ScanResult.model_validate_json(head_path.read_text(encoding="utf-8"))
     except Exception as e:
         console.print(f"[red]Error parsing JSON files: {e}[/]")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
 
     findings = diff_scans(base_result, head_result)
-    
+
     if not findings:
         console.print("[green]No tool drift detected.[/]")
         return
-        
+
     for finding in findings:
         console.print(f"[red]{finding.rule_id}[/] {finding.tool}: {finding.message}")
-        
+
     raise typer.Exit(code=1)
 
 
@@ -204,7 +213,7 @@ def version() -> None:
     console.print(__version__)
 
 
-def _emit(text: str, out: Optional[str]) -> None:
+def _emit(text: str, out: str | None) -> None:
     if out:
         Path(out).write_text(text, encoding="utf-8")
         console.print(f"[green]Wrote output to {out}[/]")

@@ -9,6 +9,7 @@ import json
 import os
 import shutil
 import subprocess
+from contextlib import suppress
 from typing import Any
 
 from mcpscan.models import ServerModel, ToolModel
@@ -43,7 +44,6 @@ def enumerate_server_tools(server: ServerModel, timeout: float = 8.0) -> list[To
         if not cmd_tokens:
             return []
         parts = [_resolve_command(cmd_tokens[0]), *cmd_tokens[1:]]
-
 
     env = dict(os.environ)
     if server.env:
@@ -118,10 +118,8 @@ def enumerate_server_tools(server: ServerModel, timeout: float = 8.0) -> list[To
             proc.terminate()
             proc.wait(timeout=1.0)
         except Exception:
-            try:
+            with suppress(Exception):
                 proc.kill()
-            except Exception:
-                pass
 
     return tools
 

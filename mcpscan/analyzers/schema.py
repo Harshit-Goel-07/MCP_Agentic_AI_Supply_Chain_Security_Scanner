@@ -18,7 +18,16 @@ from mcpscan.analyzers.base import ScanContext
 from mcpscan.config import Severity
 from mcpscan.models import Capability, EvidenceLocation, Finding, ToolModel
 
-_SENSITIVE_HINTS = ("secret", "token", "credential", "password", "private_key", "env", "/etc", "ssh")
+_SENSITIVE_HINTS = (
+    "secret",
+    "token",
+    "credential",
+    "password",
+    "private_key",
+    "env",
+    "/etc",
+    "ssh",
+)
 _UNTRUSTED_HINTS = ("url", "fetch", "http", "web", "download", "read_file", "readfile", "open")
 _EGRESS_HINTS = ("post", "upload", "send", "webhook", "publish", "email", "http_request", "request")
 _EXECUTE_HINTS = ("exec", "shell", "command", "run", "spawn", "eval", "subprocess")
@@ -46,7 +55,11 @@ def infer_capabilities(tool: ToolModel) -> list[Capability]:
     """Infer capability tags from a tool's surface. Deterministic and side-effect free."""
 
     haystack = " ".join(
-        [tool.name.lower(), tool.description.lower(), " ".join(_iter_property_names(tool.input_schema))]
+        [
+            tool.name.lower(),
+            tool.description.lower(),
+            " ".join(_iter_property_names(tool.input_schema)),
+        ]
     )
     caps: set[Capability] = set()
     if any(h in haystack for h in _SENSITIVE_HINTS):
@@ -89,7 +102,10 @@ class SchemaAnalyzer:
                         )
                     )
 
-        if Capability.EXECUTE in tool.capabilities and Capability.READ_UNTRUSTED in tool.capabilities:
+        if (
+            Capability.EXECUTE in tool.capabilities
+            and Capability.READ_UNTRUSTED in tool.capabilities
+        ):
             findings.append(
                 Finding(
                     rule_id="MCP-SCOPE-002",

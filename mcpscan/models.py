@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 from mcpscan.config import Severity
 
 
-class Capability(str, Enum):
+class Capability(StrEnum):
     """Abstract capability tags used to reason about data flows across tools."""
 
     READ_SENSITIVE = "READ_SENSITIVE"
@@ -28,7 +28,7 @@ class Capability(str, Enum):
     EXECUTE = "EXECUTE"
 
 
-class Transport(str, Enum):
+class Transport(StrEnum):
     STDIO = "stdio"
     SSE = "sse"
     HTTP = "http"
@@ -67,7 +67,6 @@ class ServerModel(BaseModel):
     args: list[str] = Field(default_factory=list)
     env: dict[str, str] = Field(default_factory=dict)
     tools: list[ToolModel] = Field(default_factory=list)
-
 
 
 class EvidenceLocation(BaseModel):
@@ -125,7 +124,10 @@ class Chain(BaseModel):
             confidence=self.confidence,
             title="Cross-server toxic data flow",
             message=f"Potential data exfiltration chain: {hops}",
-            evidence={"path": [step.model_dump() for step in self.path], "flow_type": self.flow_type},
+            evidence={
+                "path": [step.model_dump() for step in self.path],
+                "flow_type": self.flow_type,
+            },
         )
 
 
@@ -133,7 +135,7 @@ class ScanResult(BaseModel):
     """The full, serialisable output of a scan."""
 
     scanner_version: str
-    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     finished_at: datetime | None = None
     mode: str = "static"
     servers: list[ServerModel] = Field(default_factory=list)

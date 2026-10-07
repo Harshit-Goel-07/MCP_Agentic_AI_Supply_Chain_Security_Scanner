@@ -53,6 +53,7 @@ mcpscan/
 ```python
 class Analyzer(Protocol):
     id: str
+
     def analyze(self, tool: ToolModel, ctx: ScanContext) -> list[Finding]: ...
 ```
 
