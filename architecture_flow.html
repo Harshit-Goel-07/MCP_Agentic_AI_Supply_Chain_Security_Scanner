@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCPScan Architecture — Archify Flow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07090e;
+      --grid-dot: #1e293b;
+      --card-bg: #0f172a;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      
+      /* Cluster Accents (matching archify palette) */
+      --c-identity: #f43f5e;
+      --c-frontend: #06b6d4;
+      --c-backend: #10b981;
+      --c-bus: #f59e0b;
+      --c-workers: #14b8a6;
+      --c-db: #a855f7;
+      --c-infra: #eab308;
+    }
+
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --grid-dot: #cbd5e1;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      background: #020617;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      color: var(--text-main);
+    }
+
+    /* Window Wrapper (Mac Window Frame) */
+    .archify-window {
+      width: 100%;
+      max-width: 1440px;
+      background: var(--bg);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 25px 70px -15px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Title Bar */
+    .titlebar {
+      height: 48px;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      user-select: none;
+    }
+
+    .window-dots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .dot.close { background: #ff5f56; }
+    .dot.min { background: #ffbd2e; }
+    .dot.max { background: #27c93f; }
+
+    .url-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 4px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 13px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .url-bar span { color: #38bdf8; font-weight: 600; }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-main);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Diagram Canvas */
+    .canvas {
+      position: relative;
+      height: 820px;
+      background-color: var(--bg);
+      background-image: radial-gradient(var(--grid-dot) 1px, transparent 1px);
+      background-size: 24px 24px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* SVG Arrows Layer */
+    .arrows-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Groups / Cluster Boxes (Archify visual style) */
+    .cluster {
+      position: absolute;
+      border-radius: 18px;
+      border: 1px dashed;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: all 0.3s;
+      z-index: 2;
+    }
+    .cluster:hover {
+      box-shadow: 0 0 30px -5px currentColor;
+    }
+
+    .cluster-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      text-transform: capitalize;
+    }
+
+    .cluster-content {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .cluster-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    /* Inner Service Cards */
+    .service-card {
+      background: var(--card-bg);
+      border: 1px solid;
+      border-radius: 12px;
+      padding: 14px 18px;
+      min-width: 180px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+    .service-card:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 16px 35px -5px rgba(0, 0, 0, 0.6);
+      filter: brightness(1.15);
+    }
+
+    .service-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .service-meta {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .service-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .service-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 2px;
+    }
+
+    /* Theme Specific Cluster Coloring */
+    .cluster.c-discovery {
+      top: 50px;
+      left: 50px;
+      width: 280px;
+      color: var(--c-frontend);
+      border-color: rgba(6, 182, 212, 0.4);
+      background: rgba(6, 182, 212, 0.04);
+    }
+    .cluster.c-discovery .service-card { border-color: rgba(6, 182, 212, 0.3); }
+    .cluster.c-discovery .service-icon { background: rgba(6, 182, 212, 0.15); color: var(--c-frontend); }
+
+    .cluster.c-connector {
+      bottom: 60px;
+      left: 50px;
+      width: 280px;
+      color: var(--c-identity);
+      border-color: rgba(244, 63, 94, 0.4);
+      background: rgba(244, 63, 94, 0.04);
+    }
+    .cluster.c-connector .service-card { border-color: rgba(244, 63, 94, 0.3); }
+    .cluster.c-connector .service-icon { background: rgba(244, 63, 94, 0.15); color: var(--c-identity); }
+
+    .cluster.c-analyzers {
+      top: 60px;
+      left: 390px;
+      width: 320px;
+      color: var(--c-backend);
+      border-color: rgba(16, 185, 129, 0.4);
+      background: rgba(16, 185, 129, 0.04);
+    }
+    .cluster.c-analyzers .service-card { border-color: rgba(16, 185, 129, 0.3); }
+    .cluster.c-analyzers .service-icon { background: rgba(16, 185, 129, 0.15); color: var(--c-backend); }
+
+    .cluster.c-graph {
+      top: 150px;
+      left: 770px;
+      width: 290px;
+      color: var(--c-bus);
+      border-color: rgba(245, 158, 11, 0.4);
+      background: rgba(245, 158, 11, 0.04);
+    }
+    .cluster.c-graph .service-card { border-color: rgba(245, 158, 11, 0.3); }
+    .cluster.c-graph .service-icon { background: rgba(245, 158, 11, 0.15); color: var(--c-bus); }
+
+    .cluster.c-intelligence {
+      bottom: 60px;
+      left: 390px;
+      width: 320px;
+      color: var(--c-db);
+      border-color: rgba(168, 85, 247, 0.4);
+      background: rgba(168, 85, 247, 0.04);
+    }
+    .cluster.c-intelligence .service-card { border-color: rgba(168, 85, 247, 0.3); }
+    .cluster.c-intelligence .service-icon { background: rgba(168, 85, 247, 0.15); color: var(--c-db); }
+
+    .cluster.c-output {
+      top: 150px;
+      right: 50px;
+      width: 270px;
+      color: var(--c-workers);
+      border-color: rgba(20, 184, 166, 0.4);
+      background: rgba(20, 184, 166, 0.04);
+    }
+    .cluster.c-output .service-card { border-color: rgba(20, 184, 166, 0.3); }
+    .cluster.c-output .service-icon { background: rgba(20, 184, 166, 0.15); color: var(--c-workers); }
+
+    /* Edge Labels on Canvas */
+    .edge-label {
+      position: absolute;
+      background: #090d16;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      z-index: 5;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    /* Modal / Inspector Drawer */
+    .inspector {
+      position: fixed;
+      right: 40px;
+      bottom: 40px;
+      width: 360px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 100;
+      animation: slideUp 0.25s ease-out;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .inspector.open { display: flex; }
+    .inspector-title { font-size: 16px; font-weight: 700; color: #fff; }
+    .inspector-sub { font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .inspector-body { font-size: 13px; color: #cbd5e1; line-height: 1.5; }
+    .inspector-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+    .inspector-close { position: absolute; top: 14px; right: 14px; background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px; }
+  </style>
+</head>
+<body>
+
+  <div class="archify-window">
+    
+    <!-- Top Bar -->
+    <div class="titlebar">
+      <div class="window-dots">
+        <div class="dot close"></div>
+        <div class="dot min"></div>
+        <div class="dot max"></div>
+      </div>
+
+      <div class="url-bar">
+        🔒 archify.dev / <span>mcpscan-runtime-flow</span>
+      </div>
+
+      <div class="actions">
+        <button class="btn" onclick="toggleTheme()">🌓 Dark / Light</button>
+        <button class="btn" onclick="window.print()">📥 Export</button>
+      </div>
+    </div>
+
+    <!-- The Diagram Canvas -->
+    <div class="canvas" id="canvas">
+      
+      <!-- SVG Connecting Arrows -->
+      <svg class="arrows-svg" id="arrowsSvg">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#64748b" />
+          </marker>
+          <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981" />
+          </marker>
+          <marker id="arrow-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b" />
+          </marker>
+          <marker id="arrow-cyan" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#06b6d4" />
+          </marker>
+          <marker id="arrow-teal" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#14b8a6" />
+          </marker>
+        </defs>
+
+        <!-- Discovery -> Analyzers -->
+        <path d="M 330 115 L 390 115" stroke="#06b6d4" stroke-width="2" fill="none" marker-end="url(#arrow-cyan)" />
+        
+        <!-- Live Connector -> Analyzers -->
+        <path d="M 330 650 C 360 650, 360 215, 390 215" stroke="#f43f5e" stroke-width="2" stroke-dasharray="5 5" fill="none" marker-end="url(#arrow)" />
+
+        <!-- Analyzers -> The Lattice Graph -->
+        <path d="M 710 150 L 770 210" stroke="#10b981" stroke-width="2.5" fill="none" marker-end="url(#arrow-green)" />
+        <path d="M 710 240 L 770 240" stroke="#10b981" stroke-width="2.5" fill="none" marker-end="url(#arrow-green)" />
+
+        <!-- Intelligence (Catalog & LLM) -> The Lattice Graph & Analyzers -->
+        <path d="M 550 560 L 550 330" stroke="#a855f7" stroke-width="2" stroke-dasharray="4 4" fill="none" marker-end="url(#arrow)" />
+        <path d="M 710 650 C 760 650, 800 450, 830 350" stroke="#a855f7" stroke-width="2" stroke-dasharray="4 4" fill="none" marker-end="url(#arrow)" />
+
+        <!-- The Lattice Graph -> Output CI/CD -->
+        <path d="M 1060 250 L 1120 250" stroke="#f59e0b" stroke-width="2.5" fill="none" marker-end="url(#arrow-amber)" />
+      </svg>
+
+      <!-- Edge Labels -->
+      <div class="edge-label" style="top: 105px; left: 360px;">mcp.json</div>
+      <div class="edge-label" style="top: 400px; left: 365px;">stdio tools/list</div>
+      <div class="edge-label" style="top: 165px; left: 745px;">Capabilities</div>
+      <div class="edge-label" style="top: 230px; left: 745px;">Tags</div>
+      <div class="edge-label" style="top: 450px; left: 550px;">Rule Catalog</div>
+      <div class="edge-label" style="top: 240px; left: 1090px;">Toxic Flows</div>
+
+      <!-- CLUSTER 1: Ingestion & Discovery (Cyan) -->
+      <div class="cluster c-discovery">
+        <div class="cluster-header">
+          <span>🌐 Config Discovery</span>
+        </div>
+        <div class="cluster-content">
+          <div class="service-card" onclick="inspect('Client Locators', 'discovery/clients.py', 'Auto-detects workstation configurations for Claude Desktop, Cursor, VS Code, and Windsurf.')">
+            <div class="service-icon">🔍</div>
+            <div class="service-meta">
+              <div class="service-name">Client Locators</div>
+              <div class="service-sub">Cursor / Claude / VSCode</div>
+            </div>
+          </div>
+          <div class="service-card" onclick="inspect('Config Parser', 'discovery/loaders.py', 'Parses target mcp.json files, extracts command, args, environment, and inline tool definitions.')">
+            <div class="service-icon">📄</div>
+            <div class="service-meta">
+              <div class="service-name">Target Ingestion</div>
+              <div class="service-sub">mcp.json / settings</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CLUSTER 2: Live Protocol Connector (Pink) -->
+      <div class="cluster c-connector">
+        <div class="cluster-header">
+          <span>🛡️ Live Server Connector</span>
+        </div>
+        <div class="cluster-content">
+          <div class="service-card" onclick="inspect('JSON-RPC Stdio Handshake', 'connector/mcp_client.py', 'Executes standard MCP initialize & notifications/initialized protocol exchange.')">
+            <div class="service-icon">⚡</div>
+            <div class="service-meta">
+              <div class="service-name">Stdio Protocol</div>
+              <div class="service-sub">JSON-RPC 2.0 handshake</div>
+            </div>
+          </div>
+          <div class="service-card" onclick="inspect('Dynamic Tool Enumeration', 'connector/mcp_client.py', 'Calls tools/list over stdio to query live running Python, Docker, or Node subprocesses.')">
+            <div class="service-icon">📡</div>
+            <div class="service-meta">
+              <div class="service-name">Live Enumerator</div>
+              <div class="service-sub">tools/list dynamically</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CLUSTER 3: Backend Analyzers (Emerald Green) -->
+      <div class="cluster c-analyzers">
+        <div class="cluster-header">
+          <span>⚙️ Detection Engines</span>
+        </div>
+        <div class="cluster-content">
+          <div class="service-card" onclick="inspect('Static Text Heuristics', 'analyzers/static_text.py', 'Scans tool descriptions for zero-width Unicode steganography (U+200B), chat tokens, and prompt injection phrases.')">
+            <div class="service-icon">🧩</div>
+            <div class="service-meta">
+              <div class="service-name">Static Heuristics</div>
+              <div class="service-sub">Unicode / Tokens (MCP-01, 03)</div>
+            </div>
+          </div>
+          <div class="service-card" onclick="inspect('Schema & Scope Tagging', 'analyzers/schema.py', 'Evaluates excessive parameters (cmd, url, path) and infers abstract capabilities: READ_SENSITIVE, EGRESS, EXECUTE.')">
+            <div class="service-icon">📐</div>
+            <div class="service-meta">
+              <div class="service-name">Schema & Scopes</div>
+              <div class="service-sub">Capability Tagging (MCP-04)</div>
+            </div>
+          </div>
+          <div class="service-card" onclick="inspect('Semantic TF-IDF Matcher', 'analyzers/semantic.py', 'Uses scikit-learn TF-IDF cosine similarity against known poisoning archetypes to catch paraphrasing.')">
+            <div class="service-icon">🧠</div>
+            <div class="service-meta">
+              <div class="service-name">Semantic Analyzer</div>
+              <div class="service-sub">TF-IDF Vectorizer (scikit-learn)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CLUSTER 4: The Lattice Capability Graph (Amber) -->
+      <div class="cluster c-graph">
+        <div class="cluster-header">
+          <span>🔄 The Lattice Graph</span>
+        </div>
+        <div class="cluster-content">
+          <div class="service-card" onclick="inspect('Capability Graph Builder', 'graph/build.py', 'Constructs a directed in-memory NetworkX influence graph linking all tools across all servers.')">
+            <div class="service-icon">🕸️</div>
+            <div class="service-meta">
+              <div class="service-name">Influence Graph</div>
+              <div class="service-sub">NetworkX DiGraph</div>
+            </div>
+          </div>
+          <div class="service-card" onclick="inspect('Toxic Flow Traversal', 'graph/toxic_flow.py', 'Finds multi-hop paths from READ_SENSITIVE sources to EGRESS sinks across server boundaries.')">
+            <div class="service-icon">🚨</div>
+            <div class="service-meta">
+              <div class="service-name">Toxic-Flow Search</div>
+              <div class="service-sub">Cross-Server Exfil (MCP-06)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CLUSTER 5: Intelligence & Rules (Purple) -->
+      <div class="cluster c-intelligence">
+        <div class="cluster-header">
+          <span>🗄️ Intelligence & Rules</span>
+        </div>
+        <div class="cluster-content">
+          <div class="service-card" onclick="inspect('OWASP MCP Rule Catalog', 'rules/catalog.yaml', 'Maps findings to OWASP MCP Top 10 IDs (MCP-01..07) with remediation instructions.')">
+            <div class="service-icon">📖</div>
+            <div class="service-meta">
+              <div class="service-name">OWASP MCP Catalog</div>
+              <div class="service-sub">catalog.yaml / Detection-as-Code</div>
+            </div>
+          </div>
+          <div class="service-card" onclick="inspect('LLM Judge & Cache', 'llm/base.py', 'Supports Ollama, Claude, and OpenAI with SHA-256 deterministic response caching.')">
+            <div class="service-icon">🤖</div>
+            <div class="service-meta">
+              <div class="service-name">LLM Judge & Cache</div>
+              <div class="service-sub">Ollama / Claude / OpenAI</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CLUSTER 6: CI/CD & Outputs (Mint Teal) -->
+      <div class="cluster c-output">
+        <div class="cluster-header">
+          <span>🛡️ CI/CD & Outputs</span>
+        </div>
+        <div class="cluster-content">
+          <div class="service-card" onclick="inspect('SARIF 2.1 Exporter', 'report/sarif.py', 'Exports machine-readable SARIF 2.1 with multi-hop codeFlows for GitHub Code Scanning.')">
+            <div class="service-icon">📊</div>
+            <div class="service-meta">
+              <div class="service-name">SARIF 2.1 Exporter</div>
+              <div class="service-sub">GitHub Code Scanning</div>
+            </div>
+          </div>
+          <div class="service-card" onclick="inspect('Interactive HTML Report', 'report/html.py', 'Generates self-contained dark-mode report with rendered Mermaid capability diagrams.')">
+            <div class="service-icon">💻</div>
+            <div class="service-meta">
+              <div class="service-name">HTML & Mermaid</div>
+              <div class="service-sub">Interactive Report</div>
+            </div>
+          </div>
+          <div class="service-card" onclick="inspect('CI Security Gate', 'cli.py', 'Calculates 0-100 risk score and exits with code 1 if findings meet or exceed --fail-on threshold.')">
+            <div class="service-icon">⛔</div>
+            <div class="service-meta">
+              <div class="service-name">CI Security Gate</div>
+              <div class="service-sub">Exit Code 0/1 Gating</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Inspector Popover Drawer -->
+  <div class="inspector" id="inspector">
+    <button class="inspector-close" onclick="closeInspector()">✕</button>
+    <div class="inspector-tag" id="inspTag">Core Engine</div>
+    <div class="inspector-title" id="inspTitle">Component</div>
+    <div class="inspector-sub" id="inspSub">file.py</div>
+    <div class="inspector-body" id="inspBody">Description</div>
+  </div>
+
+  <script>
+    function inspect(name, sub, body) {
+      document.getElementById('inspTitle').innerText = name;
+      document.getElementById('inspSub').innerText = sub;
+      document.getElementById('inspBody').innerText = body;
+      document.getElementById('inspector').classList.add('open');
+    }
+
+    function closeInspector() {
+      document.getElementById('inspector').classList.remove('open');
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme');
+      if (current === 'light') {
+        document.documentElement.removeAttribute('data-theme');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    }
+  </script>
+</body>
+</html>

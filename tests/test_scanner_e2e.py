@@ -82,3 +82,18 @@ def test_semantic_analyzer_e2e() -> None:
     assert any(f.rule_id == "MCP-TP-002" for f in result.findings)
 
 
+def test_api_endpoints() -> None:
+    from fastapi.testclient import TestClient
+    from mcpscan.api.app import app
+
+    client = TestClient(app)
+    res_health = client.get("/healthz")
+    assert res_health.status_code == 200
+    assert res_health.json()["status"] == "ok"
+
+    res_rules = client.get("/api/v1/rules")
+    assert res_rules.status_code == 200
+    assert len(res_rules.json()["rules"]) > 0
+
+
+
